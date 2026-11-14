@@ -17,8 +17,23 @@ def _leer(nombre):
     for carpeta in ("processed", "mock"):
         archivo = RAIZ / carpeta / nombre
         if archivo.exists():
-            return pd.read_parquet(archivo), carpeta
+            datos = pd.read_parquet(archivo)
+            if datos.empty:  # un archivo procesado vacío no sirve para mostrar nada
+                continue
+            if nombre == "limpio.parquet" and "latitud" not in datos.columns:
+                datos = _normalizar_limpio(datos)
+            return datos, carpeta
     return None, None
+
+
+def _normalizar_limpio(datos):
+    """limpio.parquet llega con las columnas crudas de FIRMS: se pasan al formato del contrato."""
+    import sys
+
+    sys.path.insert(0, str(RAIZ.parent / "src"))
+    from armonizacion import normalizar
+
+    return normalizar(datos)
 
 
 def cargar(nombre):
