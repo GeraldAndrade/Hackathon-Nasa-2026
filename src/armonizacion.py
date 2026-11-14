@@ -6,7 +6,8 @@ Salida:   unificada.parquet
 Columnas de salida (contrato del equipo):
     id_unificado, latitud, longitud, fecha_hora (UTC), sensor_visto, confianza, frp
 Columnas extra (opcionales, la interfaz puede ignorarlas):
-    satelite, frp_modis, id_modis, distancia_km, desfase_min
+    satelite, id_origen (id de la fila de limpio), frp_modis, id_modis,
+    distancia_km, desfase_min
 
 Idea del algoritmo
 ------------------
@@ -230,7 +231,8 @@ def armonizar(limpio: pd.DataFrame, radio_km: float = RADIO_KM,
     unificada["confianza"] = pd.Categorical(unificada["confianza"],
                                             categories=NIVELES_CONFIANZA, ordered=True)
 
-    extras = ["satelite", "frp_modis", "id_modis", "distancia_km", "desfase_min"]
+    unificada["id_origen"] = unificada["id"]
+    extras = ["satelite", "id_origen", "frp_modis", "id_modis", "distancia_km", "desfase_min"]
     return unificada[COLUMNAS_CONTRATO + extras].reset_index(drop=True)
 
 
