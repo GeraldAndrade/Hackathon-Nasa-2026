@@ -6,7 +6,7 @@ Salida:   unificada.parquet
 Columnas de salida (contrato del equipo):
     id_unificado, latitud, longitud, fecha_hora (UTC), sensor_visto, confianza, frp
 Columnas extra (opcionales, la interfaz puede ignorarlas):
-    satelite, id_origen (id de la fila de limpio), frp_modis, id_modis,
+    satelite, temp_brillo (K), id_origen (id de la fila de limpio), frp_modis, id_modis,
     distancia_km, desfase_min
 
 Idea del algoritmo
@@ -114,6 +114,20 @@ def _fecha_hora_utc(df: pd.DataFrame) -> pd.Series:
     )
 
 
+def _temp_brillo(df: pd.DataFrame, sensor) -> pd.Series:
+    """Temperatura de brillo del píxel en kelvin.
+
+    MODIS la entrega en `brightness` (canal 21/22) y VIIRS en `bright_ti4`
+    (canal I4, se satura cerca de 367 K). Si no hay dato queda vacía.
+    """
+    if "temp_brillo" in df.columns:
+        return pd.to_numeric(df["temp_brillo"], errors="coerce")
+    vacia = pd.Series(np.nan, index=df.index)
+    modis = pd.to_numeric(df["brightness"], errors="coerce") if "brightness" in df.columns else vacia
+    viirs = pd.to_numeric(df["bright_ti4"], errors="coerce") if "bright_ti4" in df.columns else vacia
+    return pd.Series(np.where(np.asarray(sensor) == "MODIS", modis, viirs), index=df.index, dtype=float)
+
+
 def normalizar(df: pd.DataFrame) -> pd.DataFrame:
     """Lleva la tabla de P1 (cruda de FIRMS o ya con el contrato) a un formato común."""
     salida = pd.DataFrame(index=df.index)
@@ -127,6 +141,7 @@ def normalizar(df: pd.DataFrame) -> pd.DataFrame:
     conf_col = "confianza" if "confianza" in df.columns else "confidence"
     salida["confianza"] = df[conf_col].map(confianza_armonizada)
     salida["frp"] = pd.to_numeric(df["frp"], errors="coerce")
+    salida["temp_brillo"] = _temp_brillo(df, salida["sensor"])
 
     if "satellite" in df.columns:
         salida["satelite"] = df["satellite"].astype(str).map(lambda s: _SATELITES.get(s, s))
@@ -232,7 +247,7 @@ def armonizar(limpio: pd.DataFrame, radio_km: float = RADIO_KM,
                                             categories=NIVELES_CONFIANZA, ordered=True)
 
     unificada["id_origen"] = unificada["id"]
-    extras = ["satelite", "id_origen", "frp_modis", "id_modis", "distancia_km", "desfase_min"]
+    extras = ["satelite", "temp_brillo", "id_origen", "frp_modis", "id_modis", "distancia_km", "desfase_min"]
     return unificada[COLUMNAS_CONTRATO + extras].reset_index(drop=True)
 
 
