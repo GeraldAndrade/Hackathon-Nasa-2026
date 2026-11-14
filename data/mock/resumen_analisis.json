@@ -1,0 +1,31 @@
+{
+  "modulo": "P3",
+  "version_metodo": "1.0",
+  "datos_simulados": true,
+  "zona_horaria": "America/La_Paz",
+  "inicio_local": "2025-09-01",
+  "fin_local": "2025-09-30",
+  "dias": 30,
+  "celdas": 2977,
+  "detecciones_entrada": 4910,
+  "detecciones_asignadas": 506,
+  "detecciones_fuera_periodo": 4401,
+  "detecciones_fuera_parque": 3,
+  "observaciones_fuera_periodo": 0,
+  "celdas_con_prioridad": 2977,
+  "celdas_cobertura_completa": 2977,
+  "peso_recurrencia": 0.6,
+  "peso_punto_ciego": 0.4,
+  "formula": "peso_recurrencia * recurrencia_corregida + (1-peso_recurrencia) * (1-cobertura)",
+  "unidad_recurrencia": "intervalos locales de 6 h con focos / intervalos observados",
+  "fuente_limitaciones": "https://firms2.modaps.eosdis.nasa.gov/alerts/notes.php",
+  "advertencias": [
+    "3 detecciones fuera del parque/cuadrícula fueron excluidas.",
+    "Máscara de cobertura simulada y condicionada a las detecciones; no valida cobertura real."
+  ],
+  "semilla_simulacion": 42,
+  "archivos_entrada": {
+    "unificada": "C:\\Users\\marco\\Documents\\Hackathon-Nasa-2026\\data\\mock\\unificada.parquet",
+    "observaciones": "simuladas por generar_demo_analisis.py"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "modulo": "P3",
+  "version_metodo": "1.0",
+  "datos_simulados": false,
+  "zona_horaria": "America/La_Paz",
+  "inicio_local": null,
+  "fin_local": null,
+  "dias": null,
+  "celdas": 2977,
+  "detecciones_entrada": 0,
+  "detecciones_asignadas": 0,
+  "detecciones_fuera_periodo": 0,
+  "detecciones_fuera_parque": 0,
+  "observaciones_fuera_periodo": 0,
+  "celdas_con_prioridad": 0,
+  "celdas_cobertura_completa": 0,
+  "peso_recurrencia": 0.6,
+  "peso_punto_ciego": 0.4,
+  "formula": "peso_recurrencia * recurrencia_corregida + (1-peso_recurrencia) * (1-cobertura)",
+  "unidad_recurrencia": "intervalos locales de 6 h con focos / intervalos observados",
+  "fuente_limitaciones": "https://firms2.modaps.eosdis.nasa.gov/alerts/notes.php",
+  "advertencias": [
+    "Faltan registros independientes de observación: cobertura y prioridad desconocidas.",
+    "Sin período declarado: no se calculan tasas temporales.",
+    "La entrada no contiene detecciones; esto no demuestra ausencia de fuego."
+  ],
+  "archivos_entrada": {
+    "unificada": "C:\\Users\\marco\\Documents\\Hackathon-Nasa-2026\\data\\processed\\unificada.parquet",
+    "celdas": "C:\\Users\\marco\\Documents\\Hackathon-Nasa-2026\\firms\\celdas.geojson",
+    "limite": "C:\\Users\\marco\\Documents\\Hackathon-Nasa-2026\\firms\\limite.geojson",
+    "observaciones": null
+  }
+}
