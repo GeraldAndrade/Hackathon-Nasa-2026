@@ -62,6 +62,14 @@ def _secreto(nombre: str) -> str | None:
         valor = st.secrets.get(nombre)
     except Exception:  # sin archivo de secretos
         valor = None
+    if not valor:  # la app puede lanzarse desde otra carpeta: leer el secrets.toml del repo
+        ruta = RAIZ / ".streamlit" / "secrets.toml"
+        if ruta.exists():
+            import tomllib
+            try:
+                valor = tomllib.loads(ruta.read_text(encoding="utf-8")).get(nombre)
+            except Exception:
+                valor = None
     return valor or os.environ.get(nombre)
 
 
