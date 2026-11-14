@@ -13,10 +13,53 @@ Incluye gráficos sin conexión y un [guion de demostración](docs/GUION_DEMO_P3
 
 ## Aplicación en tiempo real
 
-```bash
-pip install -r requirements.txt
-streamlit run app/app.py
-```
+### Guía rápida para probar la rama `appPRUEBA`
+
+La rama `appPRUEBA` reúne el trabajo de todo el equipo encima de `main`:
+
+- La armonización de P2, con la columna `temp_brillo` y los datos de ejemplo.
+- La ingesta de P1 y el análisis de P3.
+- La app de P4.
+- La app en tiempo real: mapa satelital, de relieve, oscuro y 3D; pronóstico;
+  alertas con la regla 30-30-30 y envío por Telegram; tipos de incendio por
+  temperatura; y consulta automática de NASA FIRMS y Open-Meteo.
+- La plantilla `.streamlit/secrets.toml.example`.
+
+1. Traer la rama y cambiarse a ella:
+
+   ```bash
+   git fetch origin
+   git checkout appPRUEBA
+   ```
+
+2. Instalar las dependencias:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Configurar las claves (opcional, pero necesario para ver focos en vivo).
+   El archivo `.streamlit/secrets.toml` **no está en GitHub** porque guarda claves
+   y git lo ignora. Cada persona crea el suyo a partir de la plantilla:
+
+   ```bash
+   cp .streamlit/secrets.toml.example .streamlit/secrets.toml
+   ```
+
+   En Windows (PowerShell): `Copy-Item .streamlit/secrets.toml.example .streamlit/secrets.toml`.
+   Después completa `FIRMS_MAP_KEY` con una clave gratuita de
+   [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/map_key/). Sin clave la app
+   funciona igual, pero muestra focos de ejemplo en lugar de los reales.
+
+4. Abrir la app:
+
+   ```bash
+   streamlit run app/app.py
+   ```
+
+   Se abre en el navegador en `http://localhost:8501`.
+
+### Qué tiene la app
 
 | Página | Qué muestra |
 |---|---|
@@ -31,6 +74,6 @@ focos de [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/api/), clima, relieve
 clima histórico de [Open-Meteo](https://open-meteo.com/) (sin clave), imágenes
 satelitales de Esri y relieve 3D de AWS Terrain Tiles.
 
-Para ver focos en vivo y enviar alertas, copia `.streamlit/secrets.toml.example`
-como `.streamlit/secrets.toml` y completa `FIRMS_MAP_KEY` (gratis) y, si quieres,
-los datos del bot de Telegram. Sin clave, el mapa muestra los datos de ejemplo.
+Para enviar alertas por Telegram, completa también en `.streamlit/secrets.toml`
+`TELEGRAM_BOT_TOKEN` y `TELEGRAM_CHAT_ID` (crea un bot con @BotFather y agrégalo
+al grupo del equipo).
