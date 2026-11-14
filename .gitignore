@@ -218,6 +218,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+<<<<<<< HEAD
 
 # datos crudos
 *_raw.csv
+=======
+data/raw/
+.env
+.venv/
+__pycache__/
+>>>>>>> origin/analisis
