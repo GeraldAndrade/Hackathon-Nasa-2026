@@ -3,12 +3,12 @@
   "version_metodo": "1.0",
   "datos_simulados": false,
   "zona_horaria": "America/La_Paz",
-  "inicio_local": null,
-  "fin_local": null,
-  "dias": null,
+  "inicio_local": "2021-01-01",
+  "fin_local": "2026-11-15",
+  "dias": 2145,
   "celdas": 2977,
-  "detecciones_entrada": 0,
-  "detecciones_asignadas": 0,
+  "detecciones_entrada": 368,
+  "detecciones_asignadas": 368,
   "detecciones_fuera_periodo": 0,
   "detecciones_fuera_parque": 0,
   "observaciones_fuera_periodo": 0,
@@ -20,14 +20,19 @@
   "unidad_recurrencia": "intervalos locales de 6 h con focos / intervalos observados",
   "fuente_limitaciones": "https://firms2.modaps.eosdis.nasa.gov/alerts/notes.php",
   "advertencias": [
-    "Faltan registros independientes de observación: cobertura y prioridad desconocidas.",
-    "Sin período declarado: no se calculan tasas temporales.",
-    "La entrada no contiene detecciones; esto no demuestra ausencia de fuego."
+    "Faltan registros independientes de observación: cobertura y prioridad desconocidas."
   ],
   "archivos_entrada": {
-    "unificada": "C:\\Users\\marco\\Documents\\Hackathon-Nasa-2026\\data\\processed\\unificada.parquet",
-    "celdas": "C:\\Users\\marco\\Documents\\Hackathon-Nasa-2026\\firms\\celdas.geojson",
-    "limite": "C:\\Users\\marco\\Documents\\Hackathon-Nasa-2026\\firms\\limite.geojson",
-    "observaciones": null
+    "fuente": "NASA FIRMS (API de área)",
+    "productos": [
+      "MODIS_NRT",
+      "MODIS_SP",
+      "VIIRS_NOAA20_NRT",
+      "VIIRS_NOAA20_SP",
+      "VIIRS_NOAA21_NRT",
+      "VIIRS_NOAA21_SP",
+      "VIIRS_SNPP_NRT",
+      "VIIRS_SNPP_SP"
+    ]
   }
 }

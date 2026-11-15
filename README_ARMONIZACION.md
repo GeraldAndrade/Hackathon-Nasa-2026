@@ -33,10 +33,9 @@ Solo se emparejan sensores distintos. Los píxeles VIIRS vecinos no se fusionan 
 | Archivo | Qué es |
 |---|---|
 | `src/armonizacion.py` | El algoritmo y el programa que se ejecuta desde la terminal |
-| `src/generar_mock.py` | Genera datos de ejemplo del Tunari para probar sin esperar a los reales |
-| `tests/test_armonizacion.py` | Pruebas con casos inventados |
-| `data/mock/limpio.parquet` | Datos de ejemplo con el mismo formato que la salida de P1 |
-| `data/mock/unificada.parquet` | Resultado de la armonización sobre los datos de ejemplo |
+| `tests/test_armonizacion.py` | Pruebas unitarias con casos pequeños |
+| `data/processed/limpio.parquet` | Focos reales de NASA FIRMS dentro del parque (salida de P1) |
+| `data/processed/unificada.parquet` | Resultado de la armonización |
 
 ---
 
@@ -48,10 +47,11 @@ Instalar las dependencias (solo hacen falta estas tres para este módulo):
 pip install pandas pyarrow pytest
 ```
 
-Armonizar los datos reales de P1:
+`python src/ingesta.py` descarga los focos de FIRMS y ejecuta la armonización automáticamente.
+Para volver a armonizar sin descargar:
 
 ```bash
-python src/armonizacion.py --entrada firms/limpio.parquet
+python src/armonizacion.py
 ```
 
 Por defecto lee `data/processed/limpio.parquet` y escribe `data/processed/unificada.parquet`. Las opciones son:
@@ -62,12 +62,6 @@ Por defecto lee `data/processed/limpio.parquet` y escribe `data/processed/unific
 | `--salida` | `data/processed/unificada.parquet` | Dónde guardar el resultado |
 | `--radio-km` | `1.5` | Distancia máxima para considerar dos detecciones como el mismo foco |
 | `--ventana-min` | `60` | Diferencia máxima de tiempo, en minutos |
-
-Regenerar los datos de ejemplo:
-
-```bash
-python src/generar_mock.py
-```
 
 Correr las pruebas:
 
@@ -111,26 +105,12 @@ Columnas extra para revisar los resultados (la interfaz puede ignorarlas):
 
 ---
 
-## Resultados con los datos de ejemplo
+## Resultados con los datos reales
 
-Los datos de ejemplo simulan 5 años (2021 a 2025) con 223 incendios dentro del límite real del parque. Incluyen las horas de paso de cada satélite, nubes, incendios chicos que MODIS no ve y falsas alarmas. Como cada detección guarda el incendio que la causó, se puede comprobar si el algoritmo acierta.
-
-| | Cantidad |
-|---|---|
-| Detecciones simuladas | 5.224 (679 MODIS y 4.545 VIIRS) |
-| Detecciones unificadas | 4.910 |
-| Vistas por ambos sensores | 2.264 |
-| Solo VIIRS | 2.281 |
-| Solo MODIS (casi todas de Terra a las 10:30, cuando no pasa ningún VIIRS) | 365 |
-| Pares MODIS-VIIRS formados que son del mismo incendio | 100 % |
-| MODIS que quedaron solos teniendo un VIIRS del mismo incendio a 60 minutos o menos | 0 |
-
-En los datos de ejemplo nosotros controlamos cuánto se desvían las posiciones. Por eso estos resultados prueban que la lógica funciona, pero **el radio de 1,5 km y la ventana de 60 minutos hay que confirmarlos con los datos reales**.
+RESULTADOS_REALES
 
 ---
 
 ## Pendientes
 
-- **Datos reales.** Hoy `firms/limpio.parquet` tiene 0 focos, porque la API de tiempo casi real solo entrega los últimos 5 días. Hace falta el historial de los productos de archivo (`MODIS_SP`, `VIIRS_SNPP_SP`, `VIIRS_NOAA20_SP`) o la descarga *Archive Download* de FIRMS.
-- **Zona de descarga.** El BBOX que usa la ingesta (`-66.5,-17.5,-65.8,-17.0`) no cubre todo el parque. El Tunari llega a la longitud -66.74 y a la latitud -16.90. Se propone `-66.75,-17.56,-65.90,-16.90`.
-- **Ajuste.** Cuando lleguen los datos reales, revisar cómo se reparten `distancia_km` y `desfase_min` para afinar el radio y la ventana.
+- **Ajuste.** Revisar cómo se reparten `distancia_km` y `desfase_min` en los pares reales para afinar el radio y la ventana.

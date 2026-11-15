@@ -10,7 +10,6 @@ from shapely.geometry import box
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from analisis import analizar, preparar_celdas, guardar_resultados, generar_graficos
-from generar_demo_analisis import simular_observaciones
 
 
 def celdas():
@@ -127,17 +126,6 @@ def test_rechaza_observaciones_inconsistentes_y_ids_invalidos():
                  observaciones().assign(celda_id="X"))
     with pytest.raises(ValueError, match="único"):
         analizar(pd.concat([d, d]), celdas())
-
-
-def test_demo_reproducible_y_rango_de_prioridad():
-    d = detecciones([("U1", -17.25, -66.15, "2025-09-01T05:00Z")])
-    o = simular_observaciones(celdas(), d, "2025-09-01", "2025-09-02", 42)
-    pd.testing.assert_frame_equal(o, simular_observaciones(celdas(), d, "2025-09-01", "2025-09-02", 42))
-    r = analizar(d, celdas(), "2025-09-01", "2025-09-02", o, datos_simulados=True)
-    assert r.prioridad.prioridad.dropna().between(0, 1).all()
-    assert r.resumen["datos_simulados"] is True
-    assert r.prioridad.datos_simulados.all()
-    assert r.prioridad.intervalos_evaluados.eq(8).all()
 
 
 def test_informe_incluye_simulacion_y_no_usa_recursos_remotos(tmp_path, monkeypatch):

@@ -9,15 +9,15 @@ import tiempo_real as tr
 st.markdown("## Armonización y tipos de incendio")
 st.caption("Una sola lista de focos sin duplicados, qué tan caliente es cada uno y dónde conviene vigilar más.")
 
-unificada, origen = tr.historico("unificada.parquet")
+unificada = tr.historico("unificada.parquet")
 if unificada is None:
-    st.warning("Todavía no hay detecciones armonizadas.")
+    st.warning("Todavía no hay detecciones armonizadas. Ejecuta `python src/ingesta.py` para descargar el "
+               "historial de NASA FIRMS.")
     st.stop()
-if origen == "mock":
-    st.caption("Mostrando datos de ejemplo de 2021 a 2025 hasta que llegue el historial real de FIRMS.")
+_fechas = pd.to_datetime(unificada["fecha_hora"], utc=True).dt.tz_convert("America/La_Paz")
+st.caption(f"Historial real de NASA FIRMS dentro del parque: {_fechas.min():%d/%m/%Y} a {_fechas.max():%d/%m/%Y}.")
 
-limpio_ruta = tr.RAIZ / "data" / origen / "limpio.parquet"
-individual = tr.individual(pd.read_parquet(limpio_ruta)) if limpio_ruta.exists() else None
+individual = tr.individual_historico()
 
 u = unificada.assign(tipo=inc.clasificar(unificada.get("temp_brillo", pd.Series(index=unificada.index, dtype=float))),
                      anio=pd.to_datetime(unificada["fecha_hora"], utc=True).dt.tz_convert("America/La_Paz").dt.year)
@@ -134,27 +134,26 @@ with st.container(border=True):
     vacias = sum(1 for s in por_hora.values() if not s)
     st.markdown(f"**{vacias} de 24 horas** sin ningún paso de satélite. La peor franja va de **14:00 a 21:00**, "
                 "justo cuando hace más calor y sopla más viento.")
-    cob, origen_cob = tr.historico("cobertura.parquet", "cobertura")
-    if cob is not None and "franja_local" in cob and cob["cobertura"].notna().any():
+    cob = tr.historico("cobertura.parquet", "cobertura")
+    if cob is not None and "franja_local" in cob:
         franjas = cob.groupby("franja_local")["cobertura"].mean().reset_index()
-        st.markdown("Cobertura media por franja según el análisis de P3" +
-                    (" (observaciones simuladas)" if origen_cob == "mock" else "") + ":")
+        st.markdown("Cobertura media por franja según el análisis de P3:")
         st.dataframe(franjas.rename(columns={"franja_local": "Franja", "cobertura": "Cobertura media"}),
                      hide_index=True, column_config={"Cobertura media": st.column_config.ProgressColumn(
                          format="percent", min_value=0, max_value=1)})
 
 with st.container(border=True):
     st.markdown("### Zonas prioritarias de vigilancia")
-    prioridad, origen_p = tr.historico("prioridad.parquet", "prioridad")
-    if prioridad is None or prioridad["prioridad"].isna().all():
-        st.info("La prioridad todavía no se puede calcular: faltan registros de observación (ver README de P3).")
-    else:
+    prioridad = tr.historico("prioridad.parquet")
+    sectores = dict(tr.SECTORES)
+
+    def sector_mas_cercano(lat, lon):
+        return min(sectores, key=lambda n: (sectores[n][0] - lat) ** 2 + (sectores[n][1] - lon) ** 2)
+
+    if prioridad is None:
+        st.info("Todavía no hay análisis por celda. Ejecuta `python src/ingesta.py`.")
+    elif prioridad["prioridad"].notna().any():
         top = prioridad.dropna(subset=["prioridad"]).nlargest(10, "prioridad")
-        sectores = {n: c for n, c in tr.SECTORES.items()}
-
-        def sector_mas_cercano(lat, lon):
-            return min(sectores, key=lambda n: (sectores[n][0] - lat) ** 2 + (sectores[n][1] - lon) ** 2)
-
         tabla = pd.DataFrame({
             "Sector": [sector_mas_cercano(a, b) for a, b in zip(top.latitud, top.longitud)],
             "Coordenadas": [f"{a:.3f}, {b:.3f}" for a, b in zip(top.latitud, top.longitud)],
@@ -162,5 +161,21 @@ with st.container(border=True):
         st.dataframe(tabla, hide_index=True, use_container_width=True, column_config={
             "Cobertura": st.column_config.ProgressColumn(format="percent", min_value=0, max_value=1),
             "Prioridad": st.column_config.ProgressColumn(format="%.2f", min_value=0, max_value=1)})
-        if origen_p == "mock":
-            st.caption("Prioridad calculada por P3 con observaciones simuladas (septiembre de 2025).")
+    else:
+        # Sin registros independientes de observación la cobertura es desconocida (ver README_ANALISIS.md):
+        # se muestran las celdas donde el fuego se repite más, sin inventar un puntaje.
+        top = prioridad[prioridad["focos"] > 0].nlargest(10, ["intervalos_con_focos", "focos"])
+        if top.empty:
+            st.info("No hay focos registrados dentro del parque en el período descargado.")
+        else:
+            st.markdown("Celdas de ~1 km donde el fuego **se repite más** en el historial de FIRMS.")
+            tabla = pd.DataFrame({
+                "Sector": [sector_mas_cercano(a, b) for a, b in zip(top.latitud, top.longitud)],
+                "Coordenadas": [f"{a:.3f}, {b:.3f}" for a, b in zip(top.latitud, top.longitud)],
+                "Veces con fuego": top["intervalos_con_focos"].astype(int), "Focos": top["focos"].astype(int)})
+            maximo = int(tabla["Veces con fuego"].max())
+            st.dataframe(tabla, hide_index=True, use_container_width=True, column_config={
+                "Veces con fuego": st.column_config.ProgressColumn(format="%d", min_value=0, max_value=maximo)})
+            st.caption("«Veces con fuego» cuenta franjas de 6 h con al menos un foco. El puntaje de prioridad, que "
+                       "combina recurrencia y cobertura, necesita registros independientes de observación "
+                       "satelital (ver README_ANALISIS.md).")

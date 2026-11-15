@@ -3,7 +3,8 @@
 P3 asigna las detecciones unificadas de P2 a la cuadrícula de P1 y entrega
 `prioridad.parquet`, con las seis columnas acordadas. Añade el detalle por
 franja horaria, las métricas de recurrencia, un informe gráfico autónomo y
-un [guion de demostración](docs/GUION_DEMO_P3.md). No modifica los módulos de P1, P2 o P4.
+No modifica los módulos de P1, P2 o P4. `src/ingesta.py` lo ejecuta automáticamente
+al final de cada descarga de NASA FIRMS.
 
 ## Qué podemos medir con los archivos actuales
 
@@ -19,45 +20,37 @@ Por eso P3 funciona en dos modos:
   franja; cobertura, recurrencia corregida y prioridad quedan nulas. El gris
   significa información insuficiente. No significa riesgo bajo.
 - **Con registros independientes de observación:** calcula cobertura y prioridad
-  cuando el período está completamente evaluado. La demo incluye registros
-  inventados, separados en `data/mock/` y marcados como simulación.
+  cuando el período está completamente evaluado.
 
-La ingesta actual del Tunari tiene cero detecciones. El programa produce un
-resultado válido para las 2.977 celdas, sin inventar focos ni cobertura.
-Para un análisis histórico real falta el historial señalado por P2 y una
-fuente de cobertura independiente (huellas/máscaras y calidad de observación).
-La descarga y conversión de esos productos no están incluidas en P1/P2 actuales.
+La ingesta descarga el historial real de FIRMS (por defecto desde 2021) y P3
+lo analiza con el período declarado, sin inventar focos ni cobertura. Para
+calcular cobertura y prioridad falta una fuente de cobertura independiente
+(huellas/máscaras y calidad de observación), que todavía no se descarga.
 
 ## Ejecución
 
 Desde la raíz del repositorio, con Python y `requirements.txt` instalados:
 
-```powershell
-# Windows: usar el entorno local creado para el proyecto
-.\.venv\Scripts\python.exe -X utf8 src/armonizacion.py --entrada firms/limpio.parquet
-.\.venv\Scripts\python.exe -X utf8 src/analisis.py
+```bash
+# Todo el flujo con datos reales: descarga (P1), armonización (P2) y análisis (P3)
+python src/ingesta.py
 
-# Demo de P3 con las detecciones mock existentes de P2
-.\.venv\Scripts\python.exe -X utf8 src/generar_demo_analisis.py
+# Solo el análisis, sobre los archivos ya descargados
+python src/analisis.py --inicio 2021-01-01 --fin 2026-11-15
 
 # Pruebas de ambos módulos
-.\.venv\Scripts\python.exe -X utf8 -m pytest tests -q
+python -m pytest tests -q
 ```
 
-El primer comando solo ejecuta el módulo existente de P2 para materializar
-`data/processed/unificada.parquet`; no cambia su código. El segundo escribe
-el análisis real en `data/processed/`. Sin período declarado, los conteos
-abarcan toda la entrada, pero no se calculan tasas temporales.
-
-La demo usa septiembre de 2025 del mock existente y semilla 42. No regenera
-`limpio.parquet` ni `unificada.parquet`. Puede cambiarse con `--inicio`, `--fin`
-y `--semilla`. Si falta el mock de P2, se genera primero con
-`python src/generar_mock.py`.
+`src/analisis.py` lee `data/processed/unificada.parquet`, `celdas.geojson` y
+`limite.geojson` y escribe el análisis en `data/processed/`. Sin período
+declarado, los conteos abarcan toda la entrada, pero no se calculan tasas
+temporales.
 
 Cuando se disponga de observaciones reales:
 
-```powershell
-.\.venv\Scripts\python.exe -X utf8 src/analisis.py --observaciones data/processed/observaciones.parquet --inicio 2025-09-01 --fin 2025-09-30
+```bash
+python src/analisis.py --observaciones data/processed/observaciones.parquet --inicio 2025-09-01 --fin 2025-09-30
 ```
 
 Opciones: `--entrada`, `--celdas`, `--limite`, `--observaciones`, `--inicio`,
@@ -173,10 +166,8 @@ ranking a puntajes no nulos y leer `estado` para explicar los datos faltantes.
 La cobertura media del gráfico usa solo celdas con evaluación completa y
 muestra el número de celdas evaluables en el detalle al pasar el cursor.
 
-Las salidas reales van en `data/processed/` y las simuladas en `data/mock/`.
-La CLI rechaza guardar entradas marcadas como simulación fuera de un
-directorio `mock`. No se sustituye automáticamente una salida real desconocida
-por una simulación: la elección debe ser visible para quien usa la interfaz.
+Las salidas van en `data/processed/`. Si una entrada trae `datos_simulados`
+verdadero, la etiqueta se propaga a todas las salidas y al informe.
 
 ## Párrafo para README y presentación
 
@@ -185,5 +176,4 @@ Tunari. Con registros independientes de observación calcula qué proporción
 de intervalos tiene cobertura, corrige la recurrencia por esos intervalos y
 combina la actividad observada con la falta de cobertura en un puntaje de
 prioridad de vigilancia. Si falta información, lo muestra como desconocido.
-La demostración usa observaciones simuladas identificadas; el resultado
-orienta dónde vigilar y no predice dónde ocurrirá un incendio.
+El resultado orienta dónde vigilar y no predice dónde ocurrirá un incendio.

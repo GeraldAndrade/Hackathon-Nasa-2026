@@ -21,6 +21,7 @@ import requests
 import streamlit as st
 
 RAIZ = Path(__file__).resolve().parent.parent
+PROCESADOS = RAIZ / "data" / "processed"
 sys.path.insert(0, str(RAIZ / "src"))
 from armonizacion import armonizar, normalizar  # noqa: E402
 
@@ -80,12 +81,12 @@ def _secreto(nombre: str) -> str | None:
 @st.cache_data(show_spinner=False)
 def limite_parque() -> list[list[float]]:
     """Anillo exterior del parque como lista de [lon, lat]."""
-    for ruta in (RAIZ / "data" / "processed" / "limite.geojson", RAIZ / "firms" / "limite.geojson"):
-        if ruta.exists():
-            geo = json.loads(ruta.read_text(encoding="utf-8"))["features"][0]["geometry"]
-            anillo = geo["coordinates"][0] if geo["type"] == "Polygon" else geo["coordinates"][0][0]
-            return [list(map(float, p[:2])) for p in anillo]
-    return []
+    ruta = PROCESADOS / "limite.geojson"
+    if not ruta.exists():
+        return []
+    geo = json.loads(ruta.read_text(encoding="utf-8"))["features"][0]["geometry"]
+    anillo = geo["coordinates"][0] if geo["type"] == "Polygon" else geo["coordinates"][0][0]
+    return [list(map(float, p[:2])) for p in anillo]
 
 
 def dentro_del_parque(lon: np.ndarray, lat: np.ndarray) -> np.ndarray:
@@ -163,49 +164,75 @@ def _vacio() -> pd.DataFrame:
 # Datos históricos (salidas de P2 y P3)
 # ---------------------------------------------------------------------------
 
-@st.cache_data(show_spinner=False)
-def historico(nombre: str, columna_util: str | None = None) -> tuple[pd.DataFrame | None, str]:
-    """Lee data/processed/<nombre> si tiene datos útiles; si no, el ejemplo de data/mock.
+# Se generan con `python src/ingesta.py` a partir de los focos reales de NASA FIRMS.
+
+def _firma(ruta: Path) -> float:
+    """Fecha de modificación: invalida la caché cuando la ingesta reescribe el archivo.
+
+    (Los parámetros de st.cache_data que empiezan con "_" no cuentan, por eso se llama `version`.)
+    """
+    return ruta.stat().st_mtime if ruta.exists() else 0.0
+
+
+def historico(nombre: str, columna_util: str | None = None) -> pd.DataFrame | None:
+    """Lee data/processed/<nombre> si tiene datos útiles.
 
     `columna_util`: si se indica, el archivo solo sirve cuando esa columna tiene algún valor.
     """
-    for carpeta in ("processed", "mock"):
-        ruta = RAIZ / "data" / carpeta / nombre
-        if ruta.exists():
-            df = pd.read_parquet(ruta)
-            if len(df) and (columna_util is None or df[columna_util].notna().any()):
-                return df, carpeta
-    return None, "ninguno"
+    return _leer_historico(nombre, columna_util, _firma(PROCESADOS / nombre))
 
 
 @st.cache_data(show_spinner=False)
-def focos_historicos(anio: int, mes: int) -> dict:
-    """Focos armonizados e individuales de un mes, desde los archivos de P1/P2 (o el ejemplo)."""
-    unificada, origen = historico("unificada.parquet")
+def _leer_historico(nombre: str, columna_util: str | None, version: float) -> pd.DataFrame | None:
+    ruta = PROCESADOS / nombre
+    if not ruta.exists():
+        return None
+    df = pd.read_parquet(ruta)
+    if df.empty or (columna_util is not None and not df[columna_util].notna().any()):
+        return None
+    return df
+
+
+def individual_historico() -> pd.DataFrame | None:
+    """Detecciones originales de cada sensor (limpio.parquet), ya normalizadas."""
+    return _individual_historico(_firma(PROCESADOS / "limpio.parquet"))
+
+
+@st.cache_data(show_spinner=False)
+def _individual_historico(version: float) -> pd.DataFrame | None:
+    limpio = historico("limpio.parquet")
+    return individual(limpio) if limpio is not None else None
+
+
+def meses_historicos() -> pd.Series:
+    """Focos armonizados por (año, mes) en hora local, del más reciente al más antiguo."""
+    unificada = historico("unificada.parquet")
     if unificada is None:
-        return {"datos": _vacio(), "individual": _vacio(), "origen": "ninguno"}
+        return pd.Series(dtype=int)
+    local = pd.to_datetime(unificada["fecha_hora"], utc=True).dt.tz_convert(ZONA)
+    return local.groupby([local.dt.year, local.dt.month]).size().sort_index(ascending=False)
+
+
+def focos_historicos(anio: int, mes: int) -> dict:
+    """Focos armonizados e individuales de un mes, desde los archivos procesados."""
+    unificada = historico("unificada.parquet")
+    if unificada is None:
+        return {"datos": _vacio(), "individual": _vacio()}
     local = pd.to_datetime(unificada["fecha_hora"], utc=True).dt.tz_convert(ZONA)
     conjunto = unificada[(local.dt.year == anio) & (local.dt.month == mes)]
-    limpio = None
-    for carpeta in ([origen, "mock"] if origen != "mock" else ["mock"]):
-        ruta = RAIZ / "data" / carpeta / "limpio.parquet"
-        if ruta.exists() and len(pd.read_parquet(ruta)):
-            limpio = pd.read_parquet(ruta)
-            break
-    ind = individual(limpio) if limpio is not None else _vacio()
-    if len(ind):
+    ind = individual_historico()
+    if ind is None:
+        ind = _vacio()
+    elif len(ind):
         loc = pd.to_datetime(ind["fecha_hora"], utc=True).dt.tz_convert(ZONA)
         ind = ind[(loc.dt.year == anio) & (loc.dt.month == mes)]
-    return {"datos": conjunto, "individual": ind, "origen": origen}
+    return {"datos": conjunto, "individual": ind}
 
 
 @st.cache_data(show_spinner=False)
 def celdas_geojson() -> dict | None:
-    for carpeta in ("processed", "mock"):
-        ruta = RAIZ / "data" / carpeta / "celdas_analisis.geojson"
-        if ruta.exists():
-            return json.loads(ruta.read_text(encoding="utf-8"))
-    return None
+    ruta = PROCESADOS / "celdas_analisis.geojson"
+    return json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else None
 
 
 # ---------------------------------------------------------------------------

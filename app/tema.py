@@ -1,4 +1,4 @@
-"""Tema oscuro del mockup y piezas visuales compartidas por las páginas."""
+"""Tema oscuro y piezas visuales compartidas por las páginas."""
 
 from __future__ import annotations
 

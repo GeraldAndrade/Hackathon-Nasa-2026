@@ -105,28 +105,23 @@ La interfaz lee tanto `unificada.parquet` (para el mapa histórico y el comparad
 ## 6. Estructura del repositorio
 
 ```
-Hackaton-Nasa-2026/
+Hackathon-Nasa-2026/
 ├── .streamlit/
-│   └── config.toml          tema visual de la app
+│   ├── config.toml              tema visual de la app
+│   └── secrets.toml.example     plantilla de claves (FIRMS_MAP_KEY)
 ├── app/
-│   ├── main.py              portada de la aplicación
-│   ├── estilo.py            colores y funciones visuales compartidas
-│   ├── datos.py             lectura y validación de archivos
-│   └── pages/
-│       ├── 1_Mapa_historico.py
-│       ├── 2_Comparador.py
-│       ├── 3_Cobertura.py
-│       └── 4_Zonas_prioritarias.py
+│   ├── app.py                   punto de entrada y navegación
+│   ├── tiempo_real.py           NASA FIRMS en vivo, clima y lectura del historial
+│   ├── mapas.py, tema.py, ...   piezas visuales compartidas
+│   └── paginas/                 mapa, pronóstico, alertas y análisis
 ├── src/
-│   ├── ingesta.py           P1
-│   ├── armonizacion.py      P2
-│   ├── analisis.py          P3
-│   └── generar_mock.py      datos de ejemplo para probar la app
+│   ├── ingesta.py               P1: descarga de NASA FIRMS y ejecución de todo el flujo
+│   ├── armonizacion.py          P2
+│   └── analisis.py              P3
 ├── data/
-│   ├── raw/                 descargas originales (no se suben a GitHub)
-│   ├── processed/           resultados reales
-│   └── mock/                datos falsos para desarrollar la interfaz
-├── docs/
+│   ├── raw/                     descargas originales (no se suben a GitHub)
+│   └── processed/               resultados reales que lee la app
+├── tests/
 ├── requirements.txt
 └── README.md
 ```
@@ -145,7 +140,7 @@ Estos tres archivos son el **acuerdo entre las personas del equipo**. Si alguien
 
 Pendiente de decidir entre P1 y P2: la columna `confianza`, porque MODIS la entrega como un porcentaje y VIIRS como una categoría (baja, nominal o alta).
 
-Mientras los datos reales no estén listos, la interfaz usa **datos de ejemplo** de `data/mock/` con las mismas columnas. Cuando llegan los reales a `data/processed/`, los reemplazan automáticamente.
+La interfaz lee únicamente los datos reales de `data/processed/`, que genera `python src/ingesta.py` con la clave de NASA FIRMS.
 
 ---
 

@@ -8,7 +8,13 @@ import mapas
 import tema
 import tiempo_real as tr
 
-MESES = {7: "julio", 8: "agosto", 9: "septiembre", 10: "octubre"}
+MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
+         "noviembre", "diciembre"]
+
+
+def nombre_mes(anio_mes: tuple[int, int]) -> str:
+    return f"{MESES[anio_mes[1] - 1]} {anio_mes[0]}"
+
 
 st.markdown("## Mapa en vivo")
 
@@ -22,8 +28,15 @@ def mapa_y_situacion():
             fuente = st.segmented_control("Fuente", ["En vivo", "Histórico"], default="En vivo",
                                           key="fuente", label_visibility="collapsed")
             if fuente == "Histórico":
-                mes = st.selectbox("Mes de la temporada 2025", list(MESES), index=2,
-                                   format_func=lambda m: MESES[m].capitalize(), key="mes")
+                por_mes = tr.meses_historicos()
+                if por_mes.empty:
+                    st.caption("Todavía no hay historial procesado. Ejecuta `python src/ingesta.py`.")
+                else:
+                    opciones = list(por_mes.index)
+                    # Por defecto, el mes con más focos del último año con datos
+                    ultimo_anio = por_mes[por_mes.index.get_level_values(0) == opciones[0][0]]
+                    st.selectbox("Mes", opciones, index=opciones.index(ultimo_anio.idxmax()), key="mes",
+                                 format_func=lambda am: f"{nombre_mes(am).capitalize()} · {por_mes[am]} focos")
             else:
                 dias = st.selectbox("Ventana", [1, 2, 5], key="dias",
                                     format_func=lambda d: "Últimas 24 horas" if d == 1 else f"Últimos {d} días")
@@ -52,20 +65,26 @@ def mapa_y_situacion():
 
 
     # ---- focos ----
-    if st.session_state.get("fuente", "En vivo") == "En vivo" and tr.hay_clave_firms():
+    if (st.session_state.get("fuente") or "En vivo") == "En vivo":
         r = tr.focos_en_vivo(st.session_state.get("dias", 1))
-        origen = "Focos: NASA FIRMS en vivo"
         conjunto, individual = r.get("datos"), r.get("individual")
-        if r["errores"]:
-            st.toast("Algunas fuentes de FIRMS no respondieron: " + "; ".join(r["errores"])[:200])
+        if r["motivo"] == "sin_clave":
+            origen = "Focos: falta la clave de NASA FIRMS"
+            with izq:
+                st.error("Configura `FIRMS_MAP_KEY` en `.streamlit/secrets.toml` para ver los focos en vivo.")
+        else:
+            origen = "Focos: NASA FIRMS en vivo"
+            if r["errores"]:
+                st.toast("Algunas fuentes de FIRMS no respondieron: " + "; ".join(r["errores"])[:200])
     else:
-        mes_sel = st.session_state.get("mes", 9)
-        h = tr.focos_historicos(2025, mes_sel)
-        conjunto, individual = h["datos"], h["individual"]
-        origen = ("Focos: datos de ejemplo" if h["origen"] == "mock" else "Focos: historial procesado") + \
-            f", {MESES[mes_sel]} 2025"
-        if st.session_state.get("fuente", "En vivo") == "En vivo":
-            origen += " (falta la clave de FIRMS para ver focos en vivo)"
+        mes_sel = st.session_state.get("mes")
+        if mes_sel is None:
+            conjunto = individual = None
+            origen = "Focos: sin historial procesado"
+        else:
+            h = tr.focos_historicos(*mes_sel)
+            conjunto, individual = h["datos"], h["individual"]
+            origen = f"Focos: historial de NASA FIRMS, {nombre_mes(mes_sel)}"
 
     vista_sel = st.session_state.get("vista") or "Conjunto"
     if vista_sel == "Conjunto":
@@ -91,7 +110,7 @@ def mapa_y_situacion():
         else:
             capas_sel = set(st.session_state.get("capas") or [])
             grilla = tr.clima_en_grilla() if capas_sel & {"temperatura", "viento"} else None
-            prioridad, _ = tr.historico("prioridad.parquet", "prioridad")
+            prioridad = tr.historico("prioridad.parquet")
             m = mapas.mapa_2d(visibles, tipo_mapa_sel, capas_sel, grilla, prioridad, tr.celdas_geojson())
             st_folium(m, height=640, use_container_width=True, returned_objects=[], key=f"mapa2d_{tipo_mapa_sel}")
             if "temperatura" in capas_sel:

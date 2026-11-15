@@ -82,19 +82,24 @@ def mapa_2d(focos: pd.DataFrame, base: str, capas: set[str], grilla: pd.DataFram
         g.add_to(m)
 
     if "prioridad" in capas and prioridad is not None and celdas is not None:
-        p = prioridad.dropna(subset=["prioridad"])
+        if prioridad["prioridad"].notna().any():
+            p = prioridad.dropna(subset=["prioridad"])
+            puntaje, alias = p["prioridad"].round(2), "Prioridad de vigilancia"
+        else:
+            # Sin cobertura observada no hay puntaje: se marcan las celdas donde el fuego se repite más.
+            p = prioridad[prioridad["intervalos_con_focos"] > 0]
+            puntaje, alias = p["intervalos_con_focos"].astype(int), "Veces con fuego (franjas de 6 h)"
         if len(p):
-            corte = p["prioridad"].quantile(0.9)
-            top = p[p["prioridad"] >= corte].set_index("celda_id")["prioridad"]
-            maximo = top.max()
-            feats = [f for f in celdas["features"] if f["properties"]["celda_id"] in top.index]
-            for f in feats:
-                f["properties"]["prioridad"] = round(float(top[f["properties"]["celda_id"]]), 2)
+            corte = puntaje.quantile(0.9)
+            top = pd.Series(puntaje.to_numpy(), index=p["celda_id"])[puntaje.to_numpy() >= corte]
+            maximo = float(top.max())
+            feats = [dict(f, properties=dict(f["properties"], valor=top[f["properties"]["celda_id"]].item()))
+                     for f in celdas["features"] if f["properties"]["celda_id"] in top.index]
             folium.GeoJson(
                 {"type": "FeatureCollection", "features": feats}, name="Zonas prioritarias",
                 style_function=lambda f: {"color": "#FF7A2F", "weight": 1.2, "fillColor": "#FF7A2F",
-                                          "fillOpacity": 0.15 + 0.45 * f["properties"]["prioridad"] / maximo},
-                tooltip=folium.GeoJsonTooltip(["prioridad"], aliases=["Prioridad de vigilancia"]),
+                                          "fillOpacity": 0.15 + 0.45 * f["properties"]["valor"] / maximo},
+                tooltip=folium.GeoJsonTooltip(["valor"], aliases=[alias]),
             ).add_to(m)
 
     if "focos" in capas:
