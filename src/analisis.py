@@ -337,8 +337,8 @@ Las celdas grises no tienen puntaje; no representan riesgo bajo.</p></body></htm
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--entrada", type=Path, default=RAIZ / "data/processed/unificada.parquet")
-    parser.add_argument("--celdas", type=Path, default=RAIZ / "firms/celdas.geojson")
-    parser.add_argument("--limite", type=Path, default=RAIZ / "firms/limite.geojson")
+    parser.add_argument("--celdas", type=Path, default=RAIZ / "data/processed/celdas.geojson")
+    parser.add_argument("--limite", type=Path, default=RAIZ / "data/processed/limite.geojson")
     parser.add_argument("--observaciones", type=Path, help="Parquet de observaciones independientes")
     parser.add_argument("--inicio", help="Primera fecha local inclusiva YYYY-MM-DD")
     parser.add_argument("--fin", help="Última fecha local inclusiva YYYY-MM-DD")
@@ -348,26 +348,16 @@ def main():
     parser.add_argument("--peso-recurrencia", type=float, default=0.6)
     parser.add_argument("--datos-simulados", action="store_true")
     args = parser.parse_args()
-    # Una entrada mock siempre mantiene su etiqueta, aunque se omita el flag.
-    simulado = args.datos_simulados or any("mock" in p.resolve().parts for p in
-                                          (args.entrada, args.observaciones) if p is not None)
-    if simulado and "mock" not in args.salida.resolve().parts:
-        parser.error("Los resultados simulados deben guardarse en un directorio mock.")
     try:
         celdas = preparar_celdas(gpd.read_file(args.celdas), gpd.read_file(args.limite))
         resultado = analizar(pd.read_parquet(args.entrada), celdas, args.inicio, args.fin,
                              pd.read_parquet(args.observaciones) if args.observaciones else None,
-                             args.peso_recurrencia, simulado)
-        simulado = resultado.resumen["datos_simulados"]
-        if simulado and "mock" not in args.salida.resolve().parts:
-            parser.error("La entrada contiene datos simulados: usa una salida dentro de mock.")
+                             args.peso_recurrencia, args.datos_simulados)
         resultado.resumen["archivos_entrada"] = {
             "unificada": str(args.entrada.resolve()), "celdas": str(args.celdas.resolve()),
             "limite": str(args.limite.resolve()),
             "observaciones": str(args.observaciones.resolve()) if args.observaciones else None}
         graficos = args.graficos or args.salida.parent / "graficos"
-        if simulado and not args.sin_graficos and "mock" not in graficos.resolve().parts:
-            parser.error("Los gráficos simulados deben guardarse en un directorio mock.")
         guardar_resultados(resultado, celdas, args.salida, graficos, not args.sin_graficos)
     except (ValueError, FileNotFoundError) as exc:
         parser.exit(1, f"Error de análisis: {exc}\n")

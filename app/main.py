@@ -35,7 +35,8 @@ if limpio is None or unificada is None or prioridad is None:
 col1, col2, col3 = st.columns(3)
 col1.metric("Detecciones unificadas", len(unificada))
 col2.metric("Vistas por ambos satélites", int((unificada["sensor_visto"] == "ambos").sum()))
-col3.metric("Zonas de prioridad alta", int((prioridad["prioridad"] >= 0.66).sum()))
+hay_prioridad = prioridad["prioridad"].notna().any()
+col3.metric("Zonas de prioridad alta", int((prioridad["prioridad"] >= 0.66).sum()) if hay_prioridad else "—")
 
 st.header("Armonización de los satélites")
 izquierda, derecha = st.columns(2)
@@ -81,17 +82,22 @@ figura.update_layout(showlegend=False, height=300, margin=dict(l=0, r=0, t=10, b
 st.plotly_chart(figura)
 
 st.header("Zonas prioritarias de vigilancia")
-leyenda([(f"Prioridad {etiqueta.lower()}", color) for _, etiqueta, color in NIVELES])
-st_folium(
-    mapa_prioridad(prioridad),
-    height=450,
-    use_container_width=True,
-    returned_objects=[],
-    key="mapa_prioridad",
-)
-descripcion_accesible(
-    f"Mapa con {len(prioridad)} zonas del Tunari. Cada círculo es una zona: mientras más grande y más "
-    "anaranjado, mayor es la prioridad de vigilancia. Al pasar el cursor se muestra el nivel."
-)
+if hay_prioridad:
+    zonas = prioridad.dropna(subset=["prioridad"])
+    leyenda([(f"Prioridad {etiqueta.lower()}", color) for _, etiqueta, color in NIVELES])
+    st_folium(
+        mapa_prioridad(zonas),
+        height=450,
+        use_container_width=True,
+        returned_objects=[],
+        key="mapa_prioridad",
+    )
+    descripcion_accesible(
+        f"Mapa con {len(zonas)} zonas del Tunari. Cada círculo es una zona: mientras más grande y más "
+        "anaranjado, mayor es la prioridad de vigilancia. Al pasar el cursor se muestra el nivel."
+    )
+else:
+    st.info("El puntaje de prioridad necesita registros independientes de observación satelital "
+            "(ver README_ANALISIS.md). La página «Armonización y tipos» muestra dónde se repite más el fuego.")
 
-st.info("Usa el menú lateral para explorar el mapa, el comparador, la cobertura y las zonas prioritarias.")
+st.info("Usa el menú superior para ver el mapa en vivo, el pronóstico, las alertas y el análisis.")

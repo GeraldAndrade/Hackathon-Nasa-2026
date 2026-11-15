@@ -34,7 +34,7 @@ with st.sidebar:
     if tr.hay_clave_firms():
         st.success("NASA FIRMS conectado")
     else:
-        st.warning("Falta la clave de NASA FIRMS: los focos se muestran con datos de ejemplo.")
+        st.error("Falta la clave de NASA FIRMS: no se pueden consultar los focos en vivo.")
         st.caption("Pide una MAP_KEY gratis en firms.modaps.eosdis.nasa.gov/api/map_key y guárdala en "
                    "`.streamlit/secrets.toml` como `FIRMS_MAP_KEY = \"...\"`.")
     st.caption("Clima y relieve: Open-Meteo (sin clave). Imágenes satelitales: Esri. "

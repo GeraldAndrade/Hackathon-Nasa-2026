@@ -35,7 +35,7 @@ y para VIIRS:  l -> baja,  n -> nominal,  h -> alta.
 Uso
 ---
     python src/armonizacion.py
-    python src/armonizacion.py --entrada firms/limpio.parquet --radio-km 1.5 --ventana-min 60
+    python src/armonizacion.py --entrada data/processed/limpio.parquet --radio-km 1.5 --ventana-min 60
 """
 
 from __future__ import annotations

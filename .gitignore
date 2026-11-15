@@ -218,7 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Descargas crudas de NASA FIRMS (se regeneran con src/ingesta.py)
 data/raw/
-.env
-.venv/
-__pycache__/
+*_raw.csv

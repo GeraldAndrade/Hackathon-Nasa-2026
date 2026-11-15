@@ -12,18 +12,22 @@ COLUMNAS = {
 }
 
 
-@st.cache_data
 def _leer(nombre):
-    for carpeta in ("processed", "mock"):
-        archivo = RAIZ / carpeta / nombre
-        if archivo.exists():
-            datos = pd.read_parquet(archivo)
-            if datos.empty:  # un archivo procesado vacío no sirve para mostrar nada
-                continue
-            if nombre == "limpio.parquet" and "latitud" not in datos.columns:
-                datos = _normalizar_limpio(datos)
-            return datos, carpeta
-    return None, None
+    archivo = RAIZ / "processed" / nombre
+    return _leer_archivo(nombre, archivo.stat().st_mtime if archivo.exists() else 0.0)
+
+
+@st.cache_data
+def _leer_archivo(nombre, version):
+    archivo = RAIZ / "processed" / nombre
+    if not archivo.exists():
+        return None
+    datos = pd.read_parquet(archivo)
+    if datos.empty:  # un archivo vacío no sirve para mostrar nada
+        return None
+    if nombre == "limpio.parquet" and "latitud" not in datos.columns:
+        datos = _normalizar_limpio(datos)
+    return datos
 
 
 def _normalizar_limpio(datos):
@@ -37,18 +41,15 @@ def _normalizar_limpio(datos):
 
 
 def cargar(nombre):
-    datos, origen = _leer(nombre)
+    datos = _leer(nombre)
 
     if datos is None:
-        st.warning(f"No se encontró el archivo {nombre}. Avisa a la persona responsable de generarlo.")
+        st.warning(f"No hay datos en {nombre}. Ejecuta `python src/ingesta.py` para descargarlos de NASA FIRMS.")
         return None
 
     faltantes = [c for c in COLUMNAS.get(nombre, []) if c not in datos.columns]
     if faltantes:
         st.error(f"Al archivo {nombre} le faltan las columnas: {', '.join(faltantes)}")
         return None
-
-    if origen == "mock":
-        st.caption("Mostrando datos de ejemplo")
 
     return datos
