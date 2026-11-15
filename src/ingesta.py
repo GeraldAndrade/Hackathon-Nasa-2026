@@ -235,7 +235,7 @@ def _descargar(clave: str, producto: str, dia: date, dias: int, refrescar_desde:
             usadas, limite = cuota(clave)
         except (requests.RequestException, ValueError):
             usadas, limite = 0, 1
-        if usadas >= limite - dias:
+        if usadas >= limite - dias or "limit" in motivo.lower():
             time.sleep(60)
             continue
         fallos += 1

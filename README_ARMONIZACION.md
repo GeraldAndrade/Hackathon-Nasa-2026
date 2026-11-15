@@ -107,7 +107,20 @@ Columnas extra para revisar los resultados (la interfaz puede ignorarlas):
 
 ## Resultados con los datos reales
 
-RESULTADOS_REALES
+Historial de NASA FIRMS dentro del límite del parque, de enero de 2021 a noviembre de 2026 (`python src/ingesta.py`):
+
+| | Cantidad |
+|---|---|
+| Detecciones originales | 3.743 (263 MODIS y 3.480 VIIRS) |
+| Detecciones unificadas | 3.621 |
+| Vistas por ambos sensores | 502 |
+| Solo VIIRS | 2.978 |
+| Solo MODIS | 141 |
+| Detecciones MODIS absorbidas como duplicado | 122 de 263 |
+| Distancia típica entre pares MODIS-VIIRS | 0,62 km (el 90 % a menos de 1,18 km) |
+| Diferencia típica de tiempo entre pares | 25 minutos |
+
+La temporada de fuego va de junio a noviembre, con el máximo en agosto. VIIRS detecta unas 13 veces más focos que MODIS gracias a su píxel de 375 m.
 
 ---
 
