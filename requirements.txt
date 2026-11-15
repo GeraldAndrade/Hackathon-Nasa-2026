@@ -1,7 +1,9 @@
 pandas
 geopandas
 pyarrow
-streamlit
+streamlit>=1.46
 streamlit-folium
 folium
 plotly
+pydeck
+requests

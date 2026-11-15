@@ -230,6 +230,13 @@ def simular(anios=(2021, 2025), incendios_por_anio=45, semilla=42) -> pd.DataFra
     df = pd.DataFrame(filas)
     # MODIS da números y VIIRS letras: en una sola columna quedan como texto
     df["confidence"] = df["confidence"].astype(str)
+    # Temperatura de brillo coherente con la potencia: más FRP, píxel más caliente.
+    # VIIRS (canal I4) se satura cerca de 367 K.
+    r = np.random.default_rng(semilla + 1)
+    tb = np.clip(305 + 14 * np.log1p(df["frp"].astype(float)) + r.normal(0, 5, len(df)), 300, 395).round(1)
+    es_modis = (df["instrument"] == "MODIS").to_numpy()
+    df["brightness"] = np.where(es_modis, tb, np.nan)
+    df["bright_ti4"] = np.where(es_modis, np.nan, np.minimum(tb, 367.0))
     df = df.sort_values(["acq_date", "acq_time"]).reset_index(drop=True)
     pref = np.where(df["instrument"] == "MODIS", "M", "V")
     df.insert(0, "id", [f"{p}{i:06d}" for i, p in enumerate(pref, start=1)])

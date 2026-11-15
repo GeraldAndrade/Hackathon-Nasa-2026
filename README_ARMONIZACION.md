@@ -104,6 +104,7 @@ Columnas extra para revisar los resultados (la interfaz puede ignorarlas):
 | Columna | Descripción |
 |---|---|
 | `satelite` | Terra, Aqua, S-NPP, NOAA-20 o NOAA-21 |
+| `temp_brillo` | Temperatura de brillo del píxel en kelvin (`brightness` de MODIS, `bright_ti4` de VIIRS). La app la usa para clasificar el tipo de incendio |
 | `id_origen` | Fila de `limpio.parquet` de la que viene |
 | `id_modis`, `frp_modis` | Detección MODIS que la confirma, si la hay |
 | `distancia_km`, `desfase_min` | Qué tan lejos y cuántos minutos después o antes estaba esa detección MODIS |
